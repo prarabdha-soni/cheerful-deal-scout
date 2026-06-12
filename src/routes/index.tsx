@@ -21,16 +21,16 @@ import { searchFlights, type FlightOffer } from "@/lib/flights.functions";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Skyhop — The editor's notebook of flight deals" },
+      { title: "Cheapest Flights from India" },
       {
         name: "description",
         content:
-          "A handpicked archive of roundtrip flight deals — quietly observed, carefully chosen, occasionally extraordinary. Search live fares powered by fast-flights.",
+          "Handpicked roundtrip flight deals from India — up to 90% off on Tokyo, Berlin, Hong Kong, Athens, Toronto and more.",
       },
-      { property: "og:title", content: "Skyhop — The editor's notebook of flight deals" },
+      { property: "og:title", content: "Cheapest Flights from India" },
       {
         property: "og:description",
-        content: "Handpicked roundtrip flight deals up to 90% off.",
+        content: "Handpicked roundtrip flight deals from India — up to 90% off.",
       },
     ],
   }),
@@ -518,11 +518,11 @@ function Archive() {
         <div className="flex items-end justify-between gap-6 flex-wrap">
           <div>
             <div className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
-              § III — The Archive
+              Editor's picks
             </div>
-            <h2 className="font-serif text-5xl md:text-7xl mt-5 leading-[1] text-balance max-w-3xl">
-              Past dispatches our members <em className="text-gold">acted on</em>.
-            </h2>
+            <h1 className="font-serif text-5xl md:text-7xl mt-5 leading-[1] text-balance max-w-3xl">
+              Cheapest flights <em className="text-gold">from India</em>.
+            </h1>
           </div>
           <div className="hidden md:flex gap-2">
             <button
