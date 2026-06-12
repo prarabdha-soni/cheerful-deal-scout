@@ -21,16 +21,16 @@ import { searchFlights, type FlightOffer } from "@/lib/flights.functions";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Skyhop — The editor's notebook of flight deals" },
+      { title: "Cheapest Flights from India" },
       {
         name: "description",
         content:
-          "A handpicked archive of roundtrip flight deals — quietly observed, carefully chosen, occasionally extraordinary. Search live fares powered by fast-flights.",
+          "Handpicked roundtrip flight deals from India — up to 90% off on Tokyo, Berlin, Hong Kong, Athens, Toronto and more.",
       },
-      { property: "og:title", content: "Skyhop — The editor's notebook of flight deals" },
+      { property: "og:title", content: "Cheapest Flights from India" },
       {
         property: "og:description",
-        content: "Handpicked roundtrip flight deals up to 90% off.",
+        content: "Handpicked roundtrip flight deals from India — up to 90% off.",
       },
     ],
   }),
