@@ -140,14 +140,7 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">
       <Nav />
-      <Hero />
-      <Marquee />
-      <SearchPanel />
       <Archive />
-      <Manifesto />
-      <Testimonials />
-      <FAQ />
-      <Footer />
     </div>
   );
 }
