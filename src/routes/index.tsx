@@ -518,11 +518,11 @@ function Archive() {
         <div className="flex items-end justify-between gap-6 flex-wrap">
           <div>
             <div className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
-              § III — The Archive
+              Editor's picks
             </div>
-            <h2 className="font-serif text-5xl md:text-7xl mt-5 leading-[1] text-balance max-w-3xl">
-              Past dispatches our members <em className="text-gold">acted on</em>.
-            </h2>
+            <h1 className="font-serif text-5xl md:text-7xl mt-5 leading-[1] text-balance max-w-3xl">
+              Cheapest flights <em className="text-gold">from India</em>.
+            </h1>
           </div>
           <div className="hidden md:flex gap-2">
             <button
