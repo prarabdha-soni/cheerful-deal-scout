@@ -33,30 +33,61 @@ export type DealsPayload = {
   deals: Deal[];
 };
 
-const DUMMY_DEAL: Deal = {
-  id: "featured-bom-cdg",
-  origin: "BOM",
-  destination: "CDG",
-  origin_city: "Mumbai",
-  dest_city: "Paris",
-  dest_country: "France",
-  cabin: "Business",
-  image:
-    "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=900&q=80&auto=format&fit=crop",
-  price_inr: 38500,
-  typical_inr: 72000,
-  drop_pct: 47,
-  savings_inr: 33500,
-  family_savings_inr: 134000,
-  lowest_in_days: 210,
-  typical_source: "history",
-  google_signal: null,
-  airline: "Air India",
-  stops: 1,
-  depart_date: "Dec 20",
-  return_date: "Jan 4",
-  google_flights_url: "https://www.google.com/travel/flights",
-};
+/**
+ * Sample deals shown only when the live feed returns nothing (empty list,
+ * network error, or bad payload) so the grid is never blank.
+ */
+function makeSample(
+  id: string,
+  origin: string,
+  destination: string,
+  origin_city: string,
+  dest_city: string,
+  dest_country: string,
+  cabin: string,
+  photoId: string,
+  price_inr: number,
+  typical_inr: number,
+  stops: number,
+  depart_date: string,
+): Deal {
+  const savings = typical_inr - price_inr;
+  return {
+    id,
+    origin,
+    destination,
+    origin_city,
+    dest_city,
+    dest_country,
+    cabin,
+    image: `https://images.unsplash.com/photo-${photoId}?w=600&q=70&auto=format&fit=crop`,
+    price_inr,
+    typical_inr,
+    drop_pct: Math.round((savings / typical_inr) * 100),
+    savings_inr: savings,
+    family_savings_inr: savings * 4,
+    lowest_in_days: 180,
+    typical_source: "history",
+    google_signal: null,
+    airline: "Multiple",
+    stops,
+    depart_date,
+    return_date: "",
+    google_flights_url: "https://www.google.com/travel/flights",
+  };
+}
+
+const SAMPLE_DEALS: Deal[] = [
+  makeSample("s-cok-hnd", "COK", "HND", "Kochi", "Tokyo", "Japan", "Business", "1540959733332-eab4deabeeaf", 128481, 350000, 1, "Aug"),
+  makeSample("s-del-adl", "DEL", "ADL", "New Delhi", "Adelaide", "Australia", "Economy", "1506973035872-a4ec16b8e8d9", 80698, 157000, 1, "Sep"),
+  makeSample("s-blr-han", "BLR", "HAN", "Bengaluru", "Hanoi", "Vietnam", "Business", "1528127269322-539801943592", 94493, 138000, 0, "Oct"),
+  makeSample("s-bom-cdg", "BOM", "CDG", "Mumbai", "Paris", "France", "Business", "1502602898657-3e91760cbb34", 38500, 72000, 1, "Dec"),
+  makeSample("s-bom-dps", "BOM", "DPS", "Mumbai", "Bali", "Indonesia", "Economy", "1537996194471-e657df975ab4", 24900, 46000, 1, "Nov"),
+  makeSample("s-del-dxb", "DEL", "DXB", "New Delhi", "Dubai", "UAE", "Economy", "1512453979798-5ea266f8880c", 14200, 26500, 0, "Jul"),
+  makeSample("s-maa-sin", "MAA", "SIN", "Chennai", "Singapore", "Singapore", "Business", "1525625293386-3f8f99389edd", 62000, 112000, 0, "Sep"),
+  makeSample("s-bom-vce", "BOM", "VCE", "Mumbai", "Venice", "Italy", "Economy", "1523906834658-6e24ef2386f9", 41500, 78000, 1, "Oct"),
+  makeSample("s-del-zrh", "DEL", "ZRH", "New Delhi", "Zurich", "Switzerland", "Economy", "1506905925346-21bda4d32df4", 52300, 95000, 1, "Dec"),
+];
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -127,21 +158,17 @@ function Feed() {
 
   const payload = q.data?.ok ? q.data.data : null;
   const fetchedDeals = payload?.deals ?? [];
-  const deals = [DUMMY_DEAL, ...fetchedDeals];
 
-  const isError = !q.isLoading && (q.isError || (q.data && !q.data.ok));
+  // Show live deals when the feed returns any; otherwise (empty list, error,
+  // or still loading) fall back to sample data so the grid is never blank.
+  const usingSample = fetchedDeals.length === 0;
+  const deals = usingSample ? SAMPLE_DEALS : fetchedDeals;
 
   return (
     <section id="deals">
-      {isError && (
-        <div className="mb-6 rounded-xl bg-[#FEF2F2] border border-[#FECACA] px-5 py-4 text-center text-[14px] text-[#B23A48]">
-          Couldn't load live deals right now — showing cached data.
-        </div>
-      )}
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-9">
-        {deals.map((d) => (
-          <DealCard key={d.id} deal={d} />
+        {deals.map((d, i) => (
+          <DealCard key={d.id} deal={d} priority={i < 3} />
         ))}
       </div>
     </section>
@@ -155,7 +182,8 @@ const INR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 function dealImage(deal: Deal): string {
   if (deal.image) return deal.image;
   // Deterministic photo per deal so cards stay visually stable across refetches.
-  return `https://picsum.photos/seed/${encodeURIComponent(deal.id)}/900/600`;
+  // Small dimensions keep card thumbnails fast to fetch and decode.
+  return `https://picsum.photos/seed/${encodeURIComponent(deal.id)}/600/400`;
 }
 
 function monthOf(date: string): string {
@@ -163,7 +191,7 @@ function monthOf(date: string): string {
   return date?.trim().split(/\s+/)[0] ?? date;
 }
 
-function DealCard({ deal }: { deal: Deal }) {
+function DealCard({ deal, priority = false }: { deal: Deal; priority?: boolean }) {
   const cabin = deal.cabin ?? "Economy";
   const isBusiness = /business|first/i.test(cabin);
   const title = deal.dest_country ? `${deal.dest_city}, ${deal.dest_country}` : deal.dest_city;
@@ -178,11 +206,15 @@ function DealCard({ deal }: { deal: Deal }) {
       className="group block"
     >
       {/* Image */}
-      <div className="relative overflow-hidden rounded-2xl">
+      <div className="relative overflow-hidden rounded-2xl bg-[#EEF0F4]">
         <img
           src={dealImage(deal)}
           alt={title}
-          loading="lazy"
+          width={600}
+          height={413}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
           className="aspect-[16/11] w-full object-cover transition duration-500 group-hover:scale-[1.03]"
         />
         <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-white/90 backdrop-blur px-2.5 py-1 text-[12px] font-medium text-[#0B1020] shadow-sm">
