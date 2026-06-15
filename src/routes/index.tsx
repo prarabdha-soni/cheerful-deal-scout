@@ -60,58 +60,10 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div className="min-h-screen bg-[#F6F5FB] text-[#0B1020] font-sans antialiased">
-      <Nav />
-      <Hero />
+      <div className="pt-12 md:pt-16" />
       <Feed />
       <div className="h-24" />
     </div>
-  );
-}
-
-function Nav() {
-  return (
-    <header className="w-full">
-      <div className="mx-auto max-w-[1280px] px-6 md:px-10 h-20 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-2">
-          <span className="w-9 h-9 rounded-lg bg-[#7C5BFF] flex items-center justify-center text-white font-bold">
-            S
-          </span>
-          <span className="font-bold tracking-tight text-[17px]">skyhop</span>
-        </a>
-        <div className="flex items-center gap-5">
-          <a href="#deals" className="hidden sm:inline text-sm text-[#0B1020]/80 hover:text-[#0B1020]">
-            Live deals
-          </a>
-          <a
-            href="#deals"
-            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#0B1020] text-white text-sm font-medium hover:bg-black transition"
-          >
-            Browse
-          </a>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function Hero() {
-  return (
-    <section className="mx-auto max-w-[1280px] px-6 md:px-10 pt-16 md:pt-24 pb-12">
-      <h1 className="font-bold tracking-[-0.03em] leading-[1.02] text-[44px] sm:text-[64px] md:text-[88px] max-w-[12ch]">
-        Handpicked roundtrip deals that save you a fortune
-      </h1>
-      <p className="mt-6 text-[15px] md:text-[17px] text-[#0B1020]/70 max-w-2xl">
-        Live fares scanned across hundreds of routes from India. Sorted by the biggest price drop.
-      </p>
-      <div className="mt-10">
-        <a
-          href="#deals"
-          className="inline-flex items-center justify-center px-7 py-3.5 rounded-lg bg-[#7C5BFF] text-white text-[15px] font-medium hover:bg-[#6A47FF] transition shadow-[0_8px_24px_-8px_rgba(124,91,255,0.6)]"
-        >
-          View live deals
-        </a>
-      </div>
-    </section>
   );
 }
 
