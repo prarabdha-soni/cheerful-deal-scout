@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Plane } from "lucide-react";
+import { Briefcase, Armchair, User } from "lucide-react";
 
 export type Deal = {
   id: string;
@@ -22,6 +21,10 @@ export type Deal = {
   depart_date: string;
   return_date: string;
   google_flights_url: string;
+  // Optional presentation fields (URL data may omit these).
+  image?: string;
+  dest_country?: string;
+  cabin?: string;
 };
 
 export type DealsPayload = {
@@ -36,6 +39,10 @@ const DUMMY_DEAL: Deal = {
   destination: "CDG",
   origin_city: "Mumbai",
   dest_city: "Paris",
+  dest_country: "France",
+  cabin: "Business",
+  image:
+    "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=900&q=80&auto=format&fit=crop",
   price_inr: 38500,
   typical_inr: 72000,
   drop_pct: 47,
@@ -59,17 +66,42 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-[#F6F5FB] text-[#0B1020] font-sans antialiased">
-      <div className="pt-12 md:pt-16" />
-      <Feed />
-      <div className="h-24" />
+    <div className="min-h-screen bg-white text-[#0B1020] font-sans antialiased">
+      <Nav />
+      <main className="mx-auto max-w-[1200px] px-4 sm:px-6 py-8">
+        <Feed />
+      </main>
     </div>
   );
 }
 
-/* ------------------------------ Feed ------------------------------ */
+function Nav() {
+  return (
+    <header className="sticky top-0 z-20 w-full border-b border-black/5 bg-white/90 backdrop-blur">
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-6 h-16 flex items-center justify-between">
+        <a href="/" className="flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-lg bg-[#7C5BFF] flex items-center justify-center text-white font-bold text-[15px]">
+            Z
+          </span>
+          <span className="font-extrabold tracking-tight text-[18px]">ZOMUNK</span>
+        </a>
+        <div className="flex items-center gap-4">
+          <a href="#deals" className="text-sm font-medium text-[#0B1020]/80 hover:text-[#0B1020]">
+            Deals
+          </a>
+          <button
+            aria-label="Account"
+            className="w-9 h-9 rounded-lg border border-black/10 flex items-center justify-center text-[#0B1020]/70 hover:bg-black/5 transition"
+          >
+            <User className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
 
-type SortKey = "drop" | "price" | "saved";
+/* ------------------------------ Feed ------------------------------ */
 
 const DEALS_URL =
   "https://raw.githubusercontent.com/prarabdha-soni/faredrop-data/main/deals.json";
@@ -93,126 +125,26 @@ function Feed() {
     refetchOnWindowFocus: false,
   });
 
-  const [origin, setOrigin] = useState<string>("All");
-  const [sort, setSort] = useState<SortKey>("drop");
-
   const payload = q.data?.ok ? q.data.data : null;
   const fetchedDeals = payload?.deals ?? [];
-  const allDeals = [DUMMY_DEAL, ...fetchedDeals];
+  const deals = [DUMMY_DEAL, ...fetchedDeals];
 
-  const origins = useMemo(() => {
-    const set = new Set<string>();
-    for (const d of allDeals) set.add(d.origin_city);
-    return ["All", ...Array.from(set)];
-  }, [allDeals]);
-
-  const filtered = useMemo(() => {
-    const list = origin === "All" ? allDeals : allDeals.filter((d) => d.origin_city === origin);
-    if (sort === "drop") return list;
-    if (sort === "price") return [...list].sort((a, b) => a.price_inr - b.price_inr);
-    return [...list].sort((a, b) => (b.savings_inr ?? 0) - (a.savings_inr ?? 0));
-  }, [allDeals, origin, sort]);
-
-  const isLoading = q.isLoading;
-  const isError = !isLoading && (q.isError || (q.data && !q.data.ok));
-
-  const [hero, ...rest] = filtered;
+  const isError = !q.isLoading && (q.isError || (q.data && !q.data.ok));
 
   return (
-    <section id="deals" className="mx-auto max-w-[1280px] px-6 md:px-10">
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-        <h2 className="text-[24px] md:text-[32px] font-semibold tracking-tight">
-          Live flight deals
-        </h2>
-        {payload && payload.routes_watched > 0 && (
-          <div className="text-[12px] text-[#0B1020]/55">
-            Scanning {payload.routes_watched.toLocaleString()} routes · updated{" "}
-            {new Date(payload.generated_at).toLocaleString()}
-          </div>
-        )}
-      </div>
-
-      {/* Controls */}
-      {allDeals.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="flex flex-wrap gap-2">
-            {origins.map((o) => (
-              <button
-                key={o}
-                onClick={() => setOrigin(o)}
-                className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium border transition ${
-                  origin === o
-                    ? "bg-[#0B1020] text-white border-[#0B1020]"
-                    : "bg-white text-[#0B1020]/80 border-black/10 hover:border-[#0B1020]/30"
-                }`}
-              >
-                {o}
-              </button>
-            ))}
-          </div>
-          <div className="ml-auto flex items-center gap-1 rounded-full bg-white border border-black/10 p-1">
-            {(
-              [
-                { k: "drop", label: "Biggest drop" },
-                { k: "price", label: "Lowest price" },
-                { k: "saved", label: "Most saved (₹)" },
-              ] as const
-            ).map((s) => (
-              <button
-                key={s.k}
-                onClick={() => setSort(s.k)}
-                className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition ${
-                  sort === s.k ? "bg-[#7C5BFF] text-white" : "text-[#0B1020]/70 hover:text-[#0B1020]"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
+    <section id="deals">
+      {isError && (
+        <div className="mb-6 rounded-xl bg-[#FEF2F2] border border-[#FECACA] px-5 py-4 text-center text-[14px] text-[#B23A48]">
+          Couldn't load live deals right now — showing cached data.
         </div>
       )}
 
-      <p className="text-[12px] text-[#0B1020]/55 mb-6 italic">
-        Fares change fast — confirm the live price before booking. We link you to book directly and
-        never handle payments.
-      </p>
-
-      {isError && (
-        <StateMsg tone="error">Couldn't load live deals right now — showing cached data.</StateMsg>
-      )}
-
-      {/* Cards */}
-      {filtered.length > 0 && (
-        <>
-          {hero && <DealCard deal={hero} hero />}
-          {rest.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
-              {rest.map((d) => (
-                <DealCard key={d.id} deal={d} />
-              ))}
-            </div>
-          )}
-        </>
-      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-9">
+        {deals.map((d) => (
+          <DealCard key={d.id} deal={d} />
+        ))}
+      </div>
     </section>
-  );
-}
-
-function StateMsg({
-  children,
-  tone = "muted",
-}: {
-  children: React.ReactNode;
-  tone?: "muted" | "error";
-}) {
-  return (
-    <div
-      className={`rounded-2xl bg-white border border-black/10 px-6 py-12 text-center text-[15px] ${
-        tone === "error" ? "text-[#B23A48]" : "text-[#0B1020]/65"
-      }`}
-    >
-      {children}
-    </div>
   );
 }
 
@@ -220,188 +152,72 @@ function StateMsg({
 
 const INR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
-function useCountUp(target: number, run: boolean) {
-  const [v, setV] = useState(run ? 0 : target);
-  useEffect(() => {
-    if (!run) {
-      setV(target);
-      return;
-    }
-    const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      setV(target);
-      return;
-    }
-    const start = performance.now();
-    const dur = 900;
-    let raf = 0;
-    const step = (now: number) => {
-      const p = Math.min(1, (now - start) / dur);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setV(Math.round(target * eased));
-      if (p < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [target, run]);
-  return v;
+function dealImage(deal: Deal): string {
+  if (deal.image) return deal.image;
+  // Deterministic photo per deal so cards stay visually stable across refetches.
+  return `https://picsum.photos/seed/${encodeURIComponent(deal.id)}/900/600`;
 }
 
-function useInView<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
-  const [seen, setSeen] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || seen) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            setSeen(true);
-            io.disconnect();
-          }
-        }
-      },
-      { threshold: 0.2 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [seen]);
-  return { ref, seen };
+function monthOf(date: string): string {
+  // depart_date is a free-form string like "Dec 20"; take the leading token.
+  return date?.trim().split(/\s+/)[0] ?? date;
 }
 
-function DealCard({ deal, hero = false }: { deal: Deal; hero?: boolean }) {
-  const hasDrop =
-    deal.typical_source === "history" &&
-    deal.drop_pct != null &&
-    deal.drop_pct > 0 &&
-    deal.typical_inr != null;
-  const { ref, seen } = useInView<HTMLDivElement>();
-  const pct = useCountUp(hasDrop ? deal.drop_pct! : 0, seen && hasDrop);
-  const fillPct = hasDrop ? Math.min(95, 100 - deal.drop_pct!) : 0;
+function DealCard({ deal }: { deal: Deal }) {
+  const cabin = deal.cabin ?? "Economy";
+  const isBusiness = /business|first/i.test(cabin);
+  const title = deal.dest_country ? `${deal.dest_city}, ${deal.dest_country}` : deal.dest_city;
+  const stopsLabel = deal.stops === 0 ? "Non stop" : `${deal.stops} stop`;
+  const hasDrop = deal.drop_pct != null && deal.drop_pct > 0;
 
   return (
-    <article
-      ref={ref}
-      className={`rounded-2xl bg-white border border-black/10 overflow-hidden flex flex-col ${
-        hero ? "p-7 md:p-10" : "p-5"
-      }`}
+    <a
+      href={deal.google_flights_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group block"
     >
-      <div
-        className={`flex ${hero ? "flex-col md:flex-row md:items-start md:gap-10" : "flex-col gap-4"}`}
-      >
-        {/* LEFT: route + meta */}
-        <div className={hero ? "md:flex-1 min-w-0" : ""}>
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-[#0B1020]/55 font-medium">
-            <Plane className="w-3.5 h-3.5" />
-            Round Trip
-            {deal.lowest_in_days != null && deal.lowest_in_days > 0 && (
-              <span className="ml-2 px-2 py-0.5 rounded-md bg-[#EFE9FF] text-[#6D4AFF] normal-case tracking-normal text-[11px] font-semibold">
-                Lowest in {deal.lowest_in_days} days
-              </span>
-            )}
-          </div>
-          <div
-            className={`font-mono font-bold tracking-tight mt-3 ${
-              hero ? "text-[40px] md:text-[56px]" : "text-[26px]"
-            } leading-none`}
-          >
-            {deal.origin} → {deal.destination}
-          </div>
-          <div className={`mt-2 text-[#0B1020]/70 ${hero ? "text-[16px]" : "text-[14px]"}`}>
-            {deal.origin_city} to {deal.dest_city}
-          </div>
-          <div className={`mt-3 text-[#0B1020]/60 ${hero ? "text-[13px]" : "text-[12px]"}`}>
-            {deal.airline} · {deal.stops === 0 ? "nonstop" : `${deal.stops} stop(s)`} ·{" "}
-            {deal.depart_date}–{deal.return_date}
-          </div>
-        </div>
-
-        {/* RIGHT: pricing */}
-        <div className={hero ? "md:w-[420px] md:shrink-0 mt-6 md:mt-0" : "mt-2"}>
-          {hasDrop ? (
-            <>
-              <div
-                className={`font-bold text-[#7C5BFF] leading-none ${
-                  hero ? "text-[88px] md:text-[112px]" : "text-[56px]"
-                }`}
-                style={{ letterSpacing: "-0.04em" }}
-              >
-                ▼{pct}%
-              </div>
-              <div className="mt-4 flex items-baseline gap-3">
-                <span className={`font-bold ${hero ? "text-[34px]" : "text-[24px]"}`}>
-                  {INR(deal.price_inr)}
-                </span>
-                <span
-                  className={`line-through text-[#0B1020]/40 ${hero ? "text-[18px]" : "text-[15px]"}`}
-                >
-                  {INR(deal.typical_inr!)}
-                </span>
-              </div>
-              {deal.savings_inr != null && deal.savings_inr > 0 && (
-                <div className="mt-3">
-                  <div
-                    className={`font-semibold text-emerald-600 ${
-                      hero ? "text-[20px]" : "text-[16px]"
-                    }`}
-                  >
-                    Save {INR(deal.savings_inr)}
-                  </div>
-                  {deal.family_savings_inr != null && deal.family_savings_inr > 0 && (
-                    <div className="text-[12px] text-[#0B1020]/55 mt-0.5">
-                      {INR(deal.family_savings_inr)} for a family of 4
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Gauge */}
-              <div className="mt-5">
-                <div className="relative h-2 rounded-full bg-[#EFE9FF] overflow-visible">
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-[#7C5BFF] transition-[width] duration-[1100ms] ease-out"
-                    style={{ width: seen ? `${fillPct}%` : "0%" }}
-                  />
-                  <div
-                    className="absolute -top-1.5 right-0 w-px h-5 bg-[#0B1020]/40"
-                    aria-hidden
-                  />
-                </div>
-                <div className="flex justify-between mt-2 text-[10px] uppercase tracking-wider text-[#0B1020]/55">
-                  <span>Today's fare</span>
-                  <span>Typical</span>
-                </div>
-              </div>
-            </>
+      {/* Image */}
+      <div className="relative overflow-hidden rounded-2xl">
+        <img
+          src={dealImage(deal)}
+          alt={title}
+          loading="lazy"
+          className="aspect-[16/11] w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+        />
+        <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-white/90 backdrop-blur px-2.5 py-1 text-[12px] font-medium text-[#0B1020] shadow-sm">
+          {isBusiness ? (
+            <Briefcase className="w-3.5 h-3.5" />
           ) : (
-            <>
-              <div className={`font-bold ${hero ? "text-[56px]" : "text-[36px]"} leading-none`}>
-                {INR(deal.price_inr)}
-              </div>
-              {deal.google_signal && (
-                <div className="mt-4 inline-flex items-center px-3 py-1 rounded-md bg-[#F0EEF7] text-[#0B1020]/70 text-[12px] font-medium">
-                  Google rates this: {deal.google_signal}
-                </div>
-              )}
-            </>
+            <Armchair className="w-3.5 h-3.5" />
           )}
-
-          <a
-            href={deal.google_flights_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-[#0B1020] text-white text-[14px] font-medium hover:bg-black transition ${
-              hero ? "" : "w-full justify-center"
-            }`}
-          >
-            Verify on Google Flights
-            <ArrowUpRight className="w-4 h-4" />
-          </a>
+          {cabin}
         </div>
       </div>
-    </article>
+
+      {/* Body */}
+      <div className="pt-3">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-[17px] font-semibold tracking-tight text-[#0B1020]">{title}</h3>
+          {hasDrop && (
+            <span className="shrink-0 text-[14px] font-semibold text-emerald-600">
+              {deal.drop_pct}% off
+            </span>
+          )}
+        </div>
+        <div className="mt-1 text-[13px] text-[#0B1020]/60">
+          {monthOf(deal.depart_date)} · {stopsLabel}
+        </div>
+        <div className="text-[13px] text-[#0B1020]/60">From {deal.origin_city}</div>
+        <div className="mt-2 flex items-baseline gap-2">
+          <span className="text-[16px] font-bold text-[#0B1020]">{INR(deal.price_inr)}</span>
+          {deal.typical_inr != null && deal.typical_inr > deal.price_inr && (
+            <span className="text-[13px] line-through text-[#0B1020]/40">
+              {INR(deal.typical_inr)}
+            </span>
+          )}
+        </div>
+      </div>
+    </a>
   );
 }
