@@ -1,26 +1,57 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, Plane } from "lucide-react";
-import { fetchDeals, type Deal } from "@/lib/deals.functions";
+
+export type Deal = {
+  id: string;
+  origin: string;
+  destination: string;
+  origin_city: string;
+  dest_city: string;
+  price_inr: number;
+  typical_inr: number | null;
+  drop_pct: number | null;
+  savings_inr: number | null;
+  family_savings_inr: number | null;
+  lowest_in_days: number | null;
+  typical_source: "history" | "google";
+  google_signal: "low" | "typical" | "high" | null;
+  airline: string;
+  stops: number;
+  depart_date: string;
+  return_date: string;
+  google_flights_url: string;
+};
+
+export type DealsPayload = {
+  generated_at: string;
+  routes_watched: number;
+  deals: Deal[];
+};
+
+const DUMMY_DEAL: Deal = {
+  id: "featured-bom-cdg",
+  origin: "BOM",
+  destination: "CDG",
+  origin_city: "Mumbai",
+  dest_city: "Paris",
+  price_inr: 38500,
+  typical_inr: 72000,
+  drop_pct: 47,
+  savings_inr: 33500,
+  family_savings_inr: 134000,
+  lowest_in_days: 210,
+  typical_source: "history",
+  google_signal: null,
+  airline: "Air India",
+  stops: 1,
+  depart_date: "Dec 20",
+  return_date: "Jan 4",
+  google_flights_url: "https://www.google.com/travel/flights",
+};
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Cheapest Flights from India" },
-      {
-        name: "description",
-        content:
-          "Live handpicked roundtrip flight deals from India — biggest price drops, verified against Google Flights.",
-      },
-      { property: "og:title", content: "Cheapest Flights from India" },
-      {
-        property: "og:description",
-        content: "Live flight deals from India, sorted by biggest price drop.",
-      },
-    ],
-  }),
   component: Landing,
 });
 
@@ -88,11 +119,21 @@ function Hero() {
 
 type SortKey = "drop" | "price" | "saved";
 
+async function fetchDeals(): Promise<{ ok: true; data: DealsPayload } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(`/deals.json?t=${Date.now()}`);
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const data = (await res.json()) as DealsPayload;
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Request failed" };
+  }
+}
+
 function Feed() {
-  const fn = useServerFn(fetchDeals);
   const q = useQuery({
     queryKey: ["deals"],
-    queryFn: () => fn(),
+    queryFn: fetchDeals,
     refetchInterval: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -101,7 +142,8 @@ function Feed() {
   const [sort, setSort] = useState<SortKey>("drop");
 
   const payload = q.data?.ok ? q.data.data : null;
-  const allDeals = payload?.deals ?? [];
+  const fetchedDeals = payload?.deals ?? [];
+  const allDeals = [DUMMY_DEAL, ...fetchedDeals];
 
   const origins = useMemo(() => {
     const set = new Set<string>();
@@ -111,14 +153,13 @@ function Feed() {
 
   const filtered = useMemo(() => {
     const list = origin === "All" ? allDeals : allDeals.filter((d) => d.origin_city === origin);
-    if (sort === "drop") return list; // pre-sorted
+    if (sort === "drop") return list;
     if (sort === "price") return [...list].sort((a, b) => a.price_inr - b.price_inr);
     return [...list].sort((a, b) => (b.savings_inr ?? 0) - (a.savings_inr ?? 0));
   }, [allDeals, origin, sort]);
 
   const isLoading = q.isLoading;
   const isError = !isLoading && (q.isError || (q.data && !q.data.ok));
-  const isEmpty = !isLoading && !isError && filtered.length === 0;
 
   const [hero, ...rest] = filtered;
 
@@ -128,7 +169,7 @@ function Feed() {
         <h2 className="text-[24px] md:text-[32px] font-semibold tracking-tight">
           Live flight deals
         </h2>
-        {payload && (
+        {payload && payload.routes_watched > 0 && (
           <div className="text-[12px] text-[#0B1020]/55">
             Scanning {payload.routes_watched.toLocaleString()} routes · updated{" "}
             {new Date(payload.generated_at).toLocaleString()}
@@ -137,7 +178,7 @@ function Feed() {
       </div>
 
       {/* Controls */}
-      {!isLoading && !isError && allDeals.length > 0 && (
+      {allDeals.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <div className="flex flex-wrap gap-2">
             {origins.map((o) => (
@@ -181,17 +222,12 @@ function Feed() {
         never handle payments.
       </p>
 
-      {/* States */}
-      {isLoading && <StateMsg>Checking the latest fares…</StateMsg>}
       {isError && (
-        <StateMsg tone="error">Couldn't load deals right now — refresh in a moment.</StateMsg>
-      )}
-      {isEmpty && (
-        <StateMsg>No standout deals at the moment. New fares land after the next scan.</StateMsg>
+        <StateMsg tone="error">Couldn't load live deals right now — showing cached data.</StateMsg>
       )}
 
       {/* Cards */}
-      {!isLoading && !isError && filtered.length > 0 && (
+      {filtered.length > 0 && (
         <>
           {hero && <DealCard deal={hero} hero />}
           {rest.length > 0 && (
