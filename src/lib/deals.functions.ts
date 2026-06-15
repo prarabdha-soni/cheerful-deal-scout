@@ -33,8 +33,9 @@ export type DealsResult =
 
 export const fetchDeals = createServerFn({ method: "GET" }).handler(
   async (): Promise<DealsResult> => {
-    const url = process.env.DEALS_URL;
-    if (!url) return { ok: false, error: "DEALS_URL not configured" };
+    const url =
+      process.env.DEALS_URL ||
+      "https://raw.githubusercontent.com/lovable-dev/sample-data/main/deals.json";
     try {
       const bust = `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
       const res = await fetch(bust, {
