@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Briefcase, Armchair, User } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Briefcase, Armchair, User, Search, X } from "lucide-react";
 
 export type Deal = {
   id: string;
@@ -112,9 +113,9 @@ function Nav() {
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 h-16 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2.5">
           <span className="w-8 h-8 rounded-lg bg-[#7C5BFF] flex items-center justify-center text-white font-bold text-[15px]">
-            Z
+            N
           </span>
-          <span className="font-extrabold tracking-tight text-[18px]">ZOMUNK</span>
+          <span className="font-extrabold tracking-tight text-[18px]">Nishu</span>
         </a>
         <div className="flex items-center gap-4">
           <a href="#deals" className="text-sm font-medium text-[#0B1020]/80 hover:text-[#0B1020]">
@@ -156,6 +157,10 @@ function Feed() {
     refetchOnWindowFocus: false,
   });
 
+  const [query, setQuery] = useState("");
+  const [cabin, setCabin] = useState<"all" | "economy" | "business">("all");
+  const [sort, setSort] = useState<"drop" | "price">("drop");
+
   const payload = q.data?.ok ? q.data.data : null;
   const fetchedDeals = payload?.deals ?? [];
 
@@ -164,14 +169,137 @@ function Feed() {
   const usingSample = fetchedDeals.length === 0;
   const deals = usingSample ? SAMPLE_DEALS : fetchedDeals;
 
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = deals.filter((d) => {
+      const isBusiness = /business|first/i.test(d.cabin ?? "");
+      if (cabin === "business" && !isBusiness) return false;
+      if (cabin === "economy" && isBusiness) return false;
+      if (!q) return true;
+      const hay = `${d.dest_city} ${d.dest_country ?? ""} ${d.origin_city} ${d.destination} ${d.origin}`.toLowerCase();
+      return hay.includes(q);
+    });
+    return [...filtered].sort((a, b) =>
+      sort === "price"
+        ? a.price_inr - b.price_inr
+        : (b.drop_pct ?? 0) - (a.drop_pct ?? 0),
+    );
+  }, [deals, query, cabin, sort]);
+
   return (
     <section id="deals">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-9">
-        {deals.map((d, i) => (
-          <DealCard key={d.id} deal={d} priority={i < 3} />
-        ))}
-      </div>
+      <SearchBar
+        query={query}
+        onQuery={setQuery}
+        cabin={cabin}
+        onCabin={setCabin}
+        sort={sort}
+        onSort={setSort}
+        count={results.length}
+      />
+
+      {results.length === 0 ? (
+        <div className="mt-10 text-center text-[15px] text-[#0B1020]/60">
+          No deals match “{query}”.{" "}
+          <button onClick={() => setQuery("")} className="font-semibold text-[#7C5BFF] hover:underline">
+            Clear search
+          </button>
+        </div>
+      ) : (
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-9">
+          {results.map((d, i) => (
+            <DealCard key={d.id} deal={d} priority={i < 3} />
+          ))}
+        </div>
+      )}
     </section>
+  );
+}
+
+/* ------------------------------ Search ------------------------------ */
+
+type CabinFilter = "all" | "economy" | "business";
+type SortKey = "drop" | "price";
+
+function SearchBar({
+  query,
+  onQuery,
+  cabin,
+  onCabin,
+  sort,
+  onSort,
+  count,
+}: {
+  query: string;
+  onQuery: (v: string) => void;
+  cabin: CabinFilter;
+  onCabin: (v: CabinFilter) => void;
+  sort: SortKey;
+  onSort: (v: SortKey) => void;
+  count: number;
+}) {
+  const cabins: { key: CabinFilter; label: string }[] = [
+    { key: "all", label: "All cabins" },
+    { key: "economy", label: "Economy" },
+    { key: "business", label: "Business" },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-black/8 bg-white p-3 shadow-[0_1px_2px_rgba(11,16,32,0.04)] sm:p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        {/* Search input */}
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0B1020]/40" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => onQuery(e.target.value)}
+            placeholder="Search destination, city or country…"
+            className="h-11 w-full rounded-xl border border-black/10 bg-[#F7F8FA] pl-10 pr-9 text-[15px] text-[#0B1020] placeholder:text-[#0B1020]/40 outline-none transition focus:border-[#7C5BFF] focus:bg-white focus:ring-2 focus:ring-[#7C5BFF]/20"
+          />
+          {query && (
+            <button
+              aria-label="Clear search"
+              onClick={() => onQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#0B1020]/40 hover:bg-black/5 hover:text-[#0B1020]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Cabin filter */}
+        <div className="flex rounded-xl bg-[#F1F2F5] p-1">
+          {cabins.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => onCabin(c.key)}
+              className={`rounded-lg px-3.5 py-2 text-[13px] font-medium transition ${
+                cabin === c.key
+                  ? "bg-white text-[#0B1020] shadow-sm"
+                  : "text-[#0B1020]/60 hover:text-[#0B1020]"
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Sort */}
+        <select
+          value={sort}
+          onChange={(e) => onSort(e.target.value as SortKey)}
+          className="h-11 rounded-xl border border-black/10 bg-[#F7F8FA] px-3 text-[14px] font-medium text-[#0B1020] outline-none transition focus:border-[#7C5BFF] focus:bg-white"
+        >
+          <option value="drop">Biggest drop</option>
+          <option value="price">Lowest price</option>
+        </select>
+      </div>
+
+      <div className="mt-2.5 px-1 text-[13px] text-[#0B1020]/55">
+        {count} {count === 1 ? "deal" : "deals"}
+      </div>
+    </div>
   );
 }
 
