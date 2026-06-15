@@ -119,9 +119,12 @@ function Hero() {
 
 type SortKey = "drop" | "price" | "saved";
 
+const DEALS_URL =
+  "https://raw.githubusercontent.com/prarabdha-soni/faredrop-data/main/deals.json";
+
 async function fetchDeals(): Promise<{ ok: true; data: DealsPayload } | { ok: false; error: string }> {
   try {
-    const res = await fetch(`/deals.json?t=${Date.now()}`);
+    const res = await fetch(`${DEALS_URL}?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const data = (await res.json()) as DealsPayload;
     return { ok: true, data };
