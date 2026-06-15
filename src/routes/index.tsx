@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUpRight, Plane } from "lucide-react";
+import { fetchDeals, type Deal } from "@/lib/deals.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -9,139 +12,17 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Handpicked roundtrip flight deals from India — up to 90% off on Tokyo, Berlin, Hong Kong, Athens, Toronto and more.",
+          "Live handpicked roundtrip flight deals from India — biggest price drops, verified against Google Flights.",
       },
       { property: "og:title", content: "Cheapest Flights from India" },
       {
         property: "og:description",
-        content: "Handpicked roundtrip flight deals — up to 90% off.",
+        content: "Live flight deals from India, sorted by biggest price drop.",
       },
     ],
   }),
   component: Landing,
 });
-
-/* ------------------------------ Data ------------------------------ */
-
-type Deal = {
-  destination: string;
-  airline: string;
-  airlineLogo: string;
-  image: string;
-  original: string;
-  price: string;
-  off: string;
-  quote: string;
-  member: string;
-  avatar: string;
-  tint: string; // card background
-  quoteColor: string; // quote text color
-};
-
-const deals: Deal[] = [
-  {
-    destination: "Hong Kong",
-    airline: "Vistara",
-    airlineLogo:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Vistara-Logo.svg/512px-Vistara-Logo.svg.png",
-    image:
-      "https://images.unsplash.com/photo-1536599018102-9f803c140fc1?w=1400&auto=format&fit=crop",
-    original: "₹35,000",
-    price: "₹15,850",
-    off: "55% off",
-    quote:
-      "Got a non-stop flight to Hong Kong for 16k. I wasn't even actively searching — just saw the deal pop up and booked it. Way too good to pass.",
-    member: "Geetansh Pamnani",
-    avatar: "https://i.pravatar.cc/80?img=12",
-    tint: "#EFE9FF",
-    quoteColor: "#6D4AFF",
-  },
-  {
-    destination: "Tokyo, Japan",
-    airline: "ANA",
-    airlineLogo:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/All_Nippon_Airways_Logo.svg/512px-All_Nippon_Airways_Logo.svg.png",
-    image:
-      "https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=1400&auto=format&fit=crop",
-    original: "₹75,000",
-    price: "₹36,500",
-    off: "51% off",
-    quote:
-      "Just booked a non-stop Japan trip for me and my partner for ₹36,000. Such a great deal! Still can't believe we got Japan for that price!",
-    member: "Shivangi Virmani",
-    avatar: "https://i.pravatar.cc/80?img=47",
-    tint: "#FFF4D6",
-    quoteColor: "#B8861B",
-  },
-  {
-    destination: "Berlin, Germany",
-    airline: "Oman Air",
-    airlineLogo:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Oman_Air_logo.svg/512px-Oman_Air_logo.svg.png",
-    image:
-      "https://images.unsplash.com/photo-1587330979470-3016b6702d89?w=1400&auto=format&fit=crop",
-    original: "₹72,000",
-    price: "₹21,300",
-    off: "70% off",
-    quote:
-      "Went to Berlin for 21,000 round-trip, found the deal and took the whole family. Glad it all worked out!",
-    member: "Akshay",
-    avatar: "https://i.pravatar.cc/80?img=15",
-    tint: "#DCEBFF",
-    quoteColor: "#1F6FD9",
-  },
-  {
-    destination: "Phnom Penh, Cambodia",
-    airline: "Cambodia Angkor Air",
-    airlineLogo:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Cambodia_Angkor_Air_logo.svg/512px-Cambodia_Angkor_Air_logo.svg.png",
-    image:
-      "https://images.unsplash.com/photo-1563449716-f6f78d6e9d7c?w=1400&auto=format&fit=crop",
-    original: "₹36,000",
-    price: "₹17,200",
-    off: "52% off",
-    quote:
-      "Saw a non-stop Cambodia deal for ₹17,000 and booked it on impulse. Turned out to be one of my favourite trips.",
-    member: "Nivedita Matta",
-    avatar: "https://i.pravatar.cc/80?img=32",
-    tint: "#FFE3D6",
-    quoteColor: "#D9531F",
-  },
-  {
-    destination: "Toronto, Canada",
-    airline: "British Airways",
-    airlineLogo:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/British_Airways_Logo.svg/512px-British_Airways_Logo.svg.png",
-    image:
-      "https://images.unsplash.com/photo-1517090504586-fde19ea6066f?w=1400&auto=format&fit=crop",
-    original: "₹1,35,000",
-    price: "₹69,700",
-    off: "48% off",
-    quote:
-      "Got a round-trip to Toronto for ₹70,000 on British Airways. I've booked this route before for a lot more — a pleasant surprise.",
-    member: "Sonia Sharma",
-    avatar: "https://i.pravatar.cc/80?img=45",
-    tint: "#FFE6EF",
-    quoteColor: "#D63384",
-  },
-  {
-    destination: "Athens, Greece",
-    airline: "Kuwait Airways",
-    airlineLogo:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Kuwait_Airways_Logo.svg/512px-Kuwait_Airways_Logo.svg.png",
-    image:
-      "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=1400&auto=format&fit=crop",
-    original: "₹65,000",
-    price: "₹24,000",
-    off: "63% off",
-    quote:
-      "Thanks to this unforgettable Greece trip: explored Athens, adored Santorini sunsets, and delved into Crete's rich stories.",
-    member: "Vanshika",
-    avatar: "https://i.pravatar.cc/80?img=49",
-    tint: "#E0F4E6",
-    quoteColor: "#1F8A4C",
-  },
-];
 
 /* ------------------------------ Page ------------------------------ */
 
@@ -150,13 +31,11 @@ function Landing() {
     <div className="min-h-screen bg-[#F6F5FB] text-[#0B1020] font-sans antialiased">
       <Nav />
       <Hero />
-      <Archive />
+      <Feed />
       <div className="h-24" />
     </div>
   );
 }
-
-/* ------------------------------ Nav ------------------------------- */
 
 function Nav() {
   return (
@@ -169,14 +48,14 @@ function Nav() {
           <span className="font-bold tracking-tight text-[17px]">skyhop</span>
         </a>
         <div className="flex items-center gap-5">
-          <a href="#" className="hidden sm:inline text-sm text-[#0B1020]/80 hover:text-[#0B1020]">
-            Get the app
+          <a href="#deals" className="hidden sm:inline text-sm text-[#0B1020]/80 hover:text-[#0B1020]">
+            Live deals
           </a>
           <a
-            href="#"
+            href="#deals"
             className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#0B1020] text-white text-sm font-medium hover:bg-black transition"
           >
-            Sign up
+            Browse
           </a>
         </div>
       </div>
@@ -184,154 +63,352 @@ function Nav() {
   );
 }
 
-/* ------------------------------ Hero ------------------------------ */
-
 function Hero() {
   return (
-    <section className="mx-auto max-w-[1280px] px-6 md:px-10 pt-16 md:pt-24 pb-20">
+    <section className="mx-auto max-w-[1280px] px-6 md:px-10 pt-16 md:pt-24 pb-12">
       <h1 className="font-bold tracking-[-0.03em] leading-[1.02] text-[44px] sm:text-[64px] md:text-[88px] max-w-[12ch]">
         Handpicked roundtrip deals that save you a fortune
       </h1>
-      <div className="mt-12">
+      <p className="mt-6 text-[15px] md:text-[17px] text-[#0B1020]/70 max-w-2xl">
+        Live fares scanned across hundreds of routes from India. Sorted by the biggest price drop.
+      </p>
+      <div className="mt-10">
         <a
           href="#deals"
           className="inline-flex items-center justify-center px-7 py-3.5 rounded-lg bg-[#7C5BFF] text-white text-[15px] font-medium hover:bg-[#6A47FF] transition shadow-[0_8px_24px_-8px_rgba(124,91,255,0.6)]"
         >
-          View deals
+          View live deals
         </a>
       </div>
     </section>
   );
 }
 
-/* ----------------------------- Archive ---------------------------- */
+/* ------------------------------ Feed ------------------------------ */
 
-function Archive() {
-  const scroller = useRef<HTMLDivElement>(null);
+type SortKey = "drop" | "price" | "saved";
 
-  const scrollBy = (dir: 1 | -1) => {
-    const el = scroller.current;
-    if (!el) return;
-    const card = el.querySelector<HTMLElement>("[data-card]");
-    const step = card ? card.offsetWidth + 24 : el.clientWidth * 0.8;
-    el.scrollBy({ left: dir * step, behavior: "smooth" });
-  };
+function Feed() {
+  const fn = useServerFn(fetchDeals);
+  const q = useQuery({
+    queryKey: ["deals"],
+    queryFn: () => fn(),
+    refetchInterval: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const [origin, setOrigin] = useState<string>("All");
+  const [sort, setSort] = useState<SortKey>("drop");
+
+  const payload = q.data?.ok ? q.data.data : null;
+  const allDeals = payload?.deals ?? [];
+
+  const origins = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of allDeals) set.add(d.origin_city);
+    return ["All", ...Array.from(set)];
+  }, [allDeals]);
+
+  const filtered = useMemo(() => {
+    const list = origin === "All" ? allDeals : allDeals.filter((d) => d.origin_city === origin);
+    if (sort === "drop") return list; // pre-sorted
+    if (sort === "price") return [...list].sort((a, b) => a.price_inr - b.price_inr);
+    return [...list].sort((a, b) => (b.savings_inr ?? 0) - (a.savings_inr ?? 0));
+  }, [allDeals, origin, sort]);
+
+  const isLoading = q.isLoading;
+  const isError = !isLoading && (q.isError || (q.data && !q.data.ok));
+  const isEmpty = !isLoading && !isError && filtered.length === 0;
+
+  const [hero, ...rest] = filtered;
 
   return (
-    <section id="deals" className="relative">
-      <div className="mx-auto max-w-[1280px] px-6 md:px-10">
-        <h2 className="text-center font-semibold tracking-tight text-[28px] md:text-[36px]">
-          Past deals our members claimed
+    <section id="deals" className="mx-auto max-w-[1280px] px-6 md:px-10">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <h2 className="text-[24px] md:text-[32px] font-semibold tracking-tight">
+          Live flight deals
         </h2>
+        {payload && (
+          <div className="text-[12px] text-[#0B1020]/55">
+            Scanning {payload.routes_watched.toLocaleString()} routes · updated{" "}
+            {new Date(payload.generated_at).toLocaleString()}
+          </div>
+        )}
       </div>
 
-      <div className="relative mt-10">
-        <div
-          ref={scroller}
-          className="flex gap-6 overflow-x-auto px-6 md:px-10 pb-8 snap-x snap-mandatory scroll-smooth no-scrollbar"
-        >
-          <div className="shrink-0 w-[calc((100vw-1280px)/2)] max-[1320px]:hidden" />
-          {deals.map((d, i) => (
-            <DealCard key={i} deal={d} />
-          ))}
-          <div className="shrink-0 w-[calc((100vw-1280px)/2)] max-[1320px]:hidden" />
+      {/* Controls */}
+      {!isLoading && !isError && allDeals.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <div className="flex flex-wrap gap-2">
+            {origins.map((o) => (
+              <button
+                key={o}
+                onClick={() => setOrigin(o)}
+                className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium border transition ${
+                  origin === o
+                    ? "bg-[#0B1020] text-white border-[#0B1020]"
+                    : "bg-white text-[#0B1020]/80 border-black/10 hover:border-[#0B1020]/30"
+                }`}
+              >
+                {o}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-1 rounded-full bg-white border border-black/10 p-1">
+            {(
+              [
+                { k: "drop", label: "Biggest drop" },
+                { k: "price", label: "Lowest price" },
+                { k: "saved", label: "Most saved (₹)" },
+              ] as const
+            ).map((s) => (
+              <button
+                key={s.k}
+                onClick={() => setSort(s.k)}
+                className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition ${
+                  sort === s.k ? "bg-[#7C5BFF] text-white" : "text-[#0B1020]/70 hover:text-[#0B1020]"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
+      )}
 
-        <div className="mx-auto max-w-[1280px] px-6 md:px-10 mt-2 flex items-center justify-end gap-3">
-          <button
-            onClick={() => scrollBy(-1)}
-            aria-label="Previous"
-            className="w-11 h-11 rounded-full bg-white border border-black/10 flex items-center justify-center hover:bg-[#0B1020] hover:text-white transition shadow-sm"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => scrollBy(1)}
-            aria-label="Next"
-            className="w-11 h-11 rounded-full bg-[#0B1020] text-white flex items-center justify-center hover:bg-black transition shadow-sm"
-          >
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+      <p className="text-[12px] text-[#0B1020]/55 mb-6 italic">
+        Fares change fast — confirm the live price before booking. We link you to book directly and
+        never handle payments.
+      </p>
+
+      {/* States */}
+      {isLoading && <StateMsg>Checking the latest fares…</StateMsg>}
+      {isError && (
+        <StateMsg tone="error">Couldn't load deals right now — refresh in a moment.</StateMsg>
+      )}
+      {isEmpty && (
+        <StateMsg>No standout deals at the moment. New fares land after the next scan.</StateMsg>
+      )}
+
+      {/* Cards */}
+      {!isLoading && !isError && filtered.length > 0 && (
+        <>
+          {hero && <DealCard deal={hero} hero />}
+          {rest.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
+              {rest.map((d) => (
+                <DealCard key={d.id} deal={d} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </section>
+  );
+}
+
+function StateMsg({
+  children,
+  tone = "muted",
+}: {
+  children: React.ReactNode;
+  tone?: "muted" | "error";
+}) {
+  return (
+    <div
+      className={`rounded-2xl bg-white border border-black/10 px-6 py-12 text-center text-[15px] ${
+        tone === "error" ? "text-[#B23A48]" : "text-[#0B1020]/65"
+      }`}
+    >
+      {children}
+    </div>
   );
 }
 
 /* ------------------------------ Card ------------------------------ */
 
-function DealCard({ deal }: { deal: Deal }) {
+const INR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+
+function useCountUp(target: number, run: boolean) {
+  const [v, setV] = useState(run ? 0 : target);
+  useEffect(() => {
+    if (!run) {
+      setV(target);
+      return;
+    }
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setV(target);
+      return;
+    }
+    const start = performance.now();
+    const dur = 900;
+    let raf = 0;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setV(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, run]);
+  return v;
+}
+
+function useInView<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || seen) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setSeen(true);
+            io.disconnect();
+          }
+        }
+      },
+      { threshold: 0.2 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
+  return { ref, seen };
+}
+
+function DealCard({ deal, hero = false }: { deal: Deal; hero?: boolean }) {
+  const hasDrop =
+    deal.typical_source === "history" &&
+    deal.drop_pct != null &&
+    deal.drop_pct > 0 &&
+    deal.typical_inr != null;
+  const { ref, seen } = useInView<HTMLDivElement>();
+  const pct = useCountUp(hasDrop ? deal.drop_pct! : 0, seen && hasDrop);
+  const fillPct = hasDrop ? Math.min(95, 100 - deal.drop_pct!) : 0;
+
   return (
     <article
-      data-card
-      className="snap-start shrink-0 w-[320px] sm:w-[360px] rounded-2xl overflow-hidden flex flex-col"
-      style={{ backgroundColor: deal.tint }}
+      ref={ref}
+      className={`rounded-2xl bg-white border border-black/10 overflow-hidden flex flex-col ${
+        hero ? "p-7 md:p-10" : "p-5"
+      }`}
     >
-      {/* Image with airline logo + economy badge */}
-      <div className="relative">
-        <img
-          src={deal.image}
-          alt={deal.destination}
-          loading="lazy"
-          className="w-full h-[230px] object-cover"
-        />
-        <div className="absolute top-3 left-3 w-12 h-12 rounded-lg bg-white shadow-sm flex items-center justify-center p-1.5">
-          <img
-            src={deal.airlineLogo}
-            alt={deal.airline}
-            className="w-full h-full object-contain"
-          />
-        </div>
-        <div className="absolute top-3 right-3 px-3 py-1 rounded-md bg-black/70 text-white text-[11px] font-medium">
-          Economy
-        </div>
-      </div>
-
-      {/* Pricing block on tinted card */}
-      <div className="px-5 pt-4 pb-4 bg-white">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-[11px] uppercase tracking-wider text-black/50 font-medium">
-              Round Trip
-            </div>
-            <div className="mt-1 text-[20px] font-semibold tracking-tight">
-              {deal.destination}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[13px] font-semibold text-emerald-600">
-              {deal.off}
-            </div>
-            <div className="mt-1 flex items-baseline gap-2 justify-end">
-              <span className="text-[12px] line-through text-black/40">
-                {deal.original}
+      <div
+        className={`flex ${hero ? "flex-col md:flex-row md:items-start md:gap-10" : "flex-col gap-4"}`}
+      >
+        {/* LEFT: route + meta */}
+        <div className={hero ? "md:flex-1 min-w-0" : ""}>
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-[#0B1020]/55 font-medium">
+            <Plane className="w-3.5 h-3.5" />
+            Round Trip
+            {deal.lowest_in_days != null && deal.lowest_in_days > 0 && (
+              <span className="ml-2 px-2 py-0.5 rounded-md bg-[#EFE9FF] text-[#6D4AFF] normal-case tracking-normal text-[11px] font-semibold">
+                Lowest in {deal.lowest_in_days} days
               </span>
-              <span className="text-[18px] font-bold">{deal.price}</span>
-            </div>
+            )}
+          </div>
+          <div
+            className={`font-mono font-bold tracking-tight mt-3 ${
+              hero ? "text-[40px] md:text-[56px]" : "text-[26px]"
+            } leading-none`}
+          >
+            {deal.origin} → {deal.destination}
+          </div>
+          <div className={`mt-2 text-[#0B1020]/70 ${hero ? "text-[16px]" : "text-[14px]"}`}>
+            {deal.origin_city} to {deal.dest_city}
+          </div>
+          <div className={`mt-3 text-[#0B1020]/60 ${hero ? "text-[13px]" : "text-[12px]"}`}>
+            {deal.airline} · {deal.stops === 0 ? "nonstop" : `${deal.stops} stop(s)`} ·{" "}
+            {deal.depart_date}–{deal.return_date}
           </div>
         </div>
-      </div>
 
-      {/* Quote */}
-      <div className="px-5 py-5 flex-1 flex flex-col justify-between">
-        <p
-          className="text-[14px] leading-relaxed"
-          style={{ color: deal.quoteColor }}
-        >
-          {deal.quote}
-        </p>
-        <div className="mt-5 flex items-center gap-3">
-          <img
-            src={deal.avatar}
-            alt={deal.member}
-            className="w-9 h-9 rounded-full object-cover"
-          />
-          <span
-            className="text-[14px] font-medium"
-            style={{ color: deal.quoteColor }}
+        {/* RIGHT: pricing */}
+        <div className={hero ? "md:w-[420px] md:shrink-0 mt-6 md:mt-0" : "mt-2"}>
+          {hasDrop ? (
+            <>
+              <div
+                className={`font-bold text-[#7C5BFF] leading-none ${
+                  hero ? "text-[88px] md:text-[112px]" : "text-[56px]"
+                }`}
+                style={{ letterSpacing: "-0.04em" }}
+              >
+                ▼{pct}%
+              </div>
+              <div className="mt-4 flex items-baseline gap-3">
+                <span className={`font-bold ${hero ? "text-[34px]" : "text-[24px]"}`}>
+                  {INR(deal.price_inr)}
+                </span>
+                <span
+                  className={`line-through text-[#0B1020]/40 ${hero ? "text-[18px]" : "text-[15px]"}`}
+                >
+                  {INR(deal.typical_inr!)}
+                </span>
+              </div>
+              {deal.savings_inr != null && deal.savings_inr > 0 && (
+                <div className="mt-3">
+                  <div
+                    className={`font-semibold text-emerald-600 ${
+                      hero ? "text-[20px]" : "text-[16px]"
+                    }`}
+                  >
+                    Save {INR(deal.savings_inr)}
+                  </div>
+                  {deal.family_savings_inr != null && deal.family_savings_inr > 0 && (
+                    <div className="text-[12px] text-[#0B1020]/55 mt-0.5">
+                      {INR(deal.family_savings_inr)} for a family of 4
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Gauge */}
+              <div className="mt-5">
+                <div className="relative h-2 rounded-full bg-[#EFE9FF] overflow-visible">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full bg-[#7C5BFF] transition-[width] duration-[1100ms] ease-out"
+                    style={{ width: seen ? `${fillPct}%` : "0%" }}
+                  />
+                  <div
+                    className="absolute -top-1.5 right-0 w-px h-5 bg-[#0B1020]/40"
+                    aria-hidden
+                  />
+                </div>
+                <div className="flex justify-between mt-2 text-[10px] uppercase tracking-wider text-[#0B1020]/55">
+                  <span>Today's fare</span>
+                  <span>Typical</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={`font-bold ${hero ? "text-[56px]" : "text-[36px]"} leading-none`}>
+                {INR(deal.price_inr)}
+              </div>
+              {deal.google_signal && (
+                <div className="mt-4 inline-flex items-center px-3 py-1 rounded-md bg-[#F0EEF7] text-[#0B1020]/70 text-[12px] font-medium">
+                  Google rates this: {deal.google_signal}
+                </div>
+              )}
+            </>
+          )}
+
+          <a
+            href={deal.google_flights_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-[#0B1020] text-white text-[14px] font-medium hover:bg-black transition ${
+              hero ? "" : "w-full justify-center"
+            }`}
           >
-            {deal.member}
-          </span>
+            Verify on Google Flights
+            <ArrowUpRight className="w-4 h-4" />
+          </a>
         </div>
       </div>
     </article>
