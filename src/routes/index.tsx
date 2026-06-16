@@ -270,11 +270,57 @@ function SearchBar({
 
 const INR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
+// Curated, reliable Unsplash photo IDs per destination city.
+const CITY_PHOTOS: Record<string, string> = {
+  Tokyo: "1540959733332-eab4deabeeaf",
+  Adelaide: "1506973035872-a4ec16b8e8d9",
+  Hanoi: "1528127269322-539801943592",
+  Paris: "1502602898657-3e91760cbb34",
+  Bali: "1537996194471-e657df975ab4",
+  Dubai: "1512453979798-5ea266f8880c",
+  Singapore: "1525625293386-3f8f99389edd",
+  Venice: "1523906834658-6e24ef2386f9",
+  Zurich: "1506905925346-21bda4d32df4",
+  London: "1513635269975-59663e0ac1ad",
+  "New York": "1500916434205-0c77489c6cf7",
+  Bangkok: "1508009603885-50cf7c579365",
+  Sydney: "1506973035872-a4ec16b8e8d9",
+  Rome: "1552832230-c0197dd311b5",
+  Istanbul: "1524231757912-21f4fe3a7200",
+  Barcelona: "1539037116277-4db20889f2d4",
+  Amsterdam: "1534351590666-13e3e96c5017",
+  Seoul: "1538485399081-7c8970f1c7c8",
+  "Hong Kong": "1536599524557-5f784dd53282",
+  "Kuala Lumpur": "1596422846543-75c6fc197f07",
+  Maldives: "1514282401047-d79a71a590e8",
+  Phuket: "1589394815804-964ed0be2eb5",
+  Doha: "1559059699-085698eba48c",
+  Auckland: "1507699622108-4be3abd695ad",
+  Melbourne: "1514395462725-fb4566210144",
+  Colombo: "1546708973-b321cccf1a3b",
+  Kathmandu: "1532686255137-7ba3b66dca4f",
+  Male: "1514282401047-d79a71a590e8",
+};
+
+const FALLBACK_PHOTOS = [
+  "1488085061387-422e29b40080",
+  "1502920917128-1aa500764cbd",
+  "1469854523086-cc02fe5d8800",
+  "1500530855697-b586d89ba3ee",
+  "1507608616759-54f48f0af0ee",
+  "1476514525535-07fb3b4ae5f1",
+];
+
 function dealImage(deal: Deal): string {
   if (deal.image) return deal.image;
-  // City-specific high-quality image via loremflickr (Flickr-sourced).
-  const tag = `${deal.dest_city},city,skyline`.replace(/\s+/g, "");
-  return `https://loremflickr.com/800/560/${encodeURIComponent(tag)}?lock=${encodeURIComponent(deal.id)}`;
+  const id =
+    CITY_PHOTOS[deal.dest_city] ??
+    FALLBACK_PHOTOS[
+      Math.abs(
+        [...deal.id].reduce((a, c) => a + c.charCodeAt(0), 0),
+      ) % FALLBACK_PHOTOS.length
+    ];
+  return `https://images.unsplash.com/photo-${id}?w=800&q=70&auto=format&fit=crop`;
 }
 
 function monthOf(date: string): string {
