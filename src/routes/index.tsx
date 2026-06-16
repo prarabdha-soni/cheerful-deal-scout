@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Briefcase, Armchair, User, Search, X } from "lucide-react";
+import { Crown, User, Search, X } from "lucide-react";
+
 
 export type Deal = {
   id: string;
