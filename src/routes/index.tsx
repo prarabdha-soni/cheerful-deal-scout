@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Crown, User, Search, X } from "lucide-react";
+import { Crown, User, Search, X, TrendingDown } from "lucide-react";
 
 
 export type Deal = {
@@ -399,7 +399,8 @@ function DealCard({ deal, priority = false }: { deal: Deal; priority?: boolean }
           <Crown className="w-3.5 h-3.5" strokeWidth={2} />
           {cabin}
         </div>
-        <div className="absolute top-3.5 right-3.5 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 text-[13px] font-bold text-white shadow-[0_2px_10px_rgba(5,150,105,0.45)]">
+        <div className="absolute top-3.5 right-3.5 inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 px-3 py-1.5 text-[13px] font-extrabold tracking-tight text-white shadow-[0_3px_12px_rgba(5,150,105,0.5)] ring-1 ring-white/25">
+          <TrendingDown className="h-3.5 w-3.5" strokeWidth={2.5} />
           {drop}% OFF
         </div>
       </div>
