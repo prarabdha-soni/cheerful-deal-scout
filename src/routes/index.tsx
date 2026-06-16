@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Briefcase, Armchair, User, Search, X } from "lucide-react";
+import { Crown, User, Search, X } from "lucide-react";
+
 
 export type Deal = {
   id: string;
@@ -158,41 +159,33 @@ function Feed() {
   });
 
   const [query, setQuery] = useState("");
-  const [cabin, setCabin] = useState<"all" | "economy" | "business">("all");
   const [sort, setSort] = useState<"drop" | "price">("drop");
 
   const payload = q.data?.ok ? q.data.data : null;
   const fetchedDeals = payload?.deals ?? [];
 
-  // Show live deals when the feed returns any; otherwise (empty list, error,
-  // or still loading) fall back to sample data so the grid is never blank.
   const usingSample = fetchedDeals.length === 0;
   const deals = usingSample ? SAMPLE_DEALS : fetchedDeals;
 
   const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const needle = query.trim().toLowerCase();
     const filtered = deals.filter((d) => {
-      const isBusiness = /business|first/i.test(d.cabin ?? "");
-      if (cabin === "business" && !isBusiness) return false;
-      if (cabin === "economy" && isBusiness) return false;
-      if (!q) return true;
+      if (!needle) return true;
       const hay = `${d.dest_city} ${d.dest_country ?? ""} ${d.origin_city} ${d.destination} ${d.origin}`.toLowerCase();
-      return hay.includes(q);
+      return hay.includes(needle);
     });
     return [...filtered].sort((a, b) =>
       sort === "price"
         ? a.price_inr - b.price_inr
         : (b.drop_pct ?? 0) - (a.drop_pct ?? 0),
     );
-  }, [deals, query, cabin, sort]);
+  }, [deals, query, sort]);
 
   return (
     <section id="deals">
       <SearchBar
         query={query}
         onQuery={setQuery}
-        cabin={cabin}
-        onCabin={setCabin}
         sort={sort}
         onSort={setSort}
         count={results.length}
@@ -206,7 +199,7 @@ function Feed() {
           </button>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-9">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
           {results.map((d, i) => (
             <DealCard key={d.id} deal={d} priority={i < 3} />
           ))}
@@ -218,36 +211,24 @@ function Feed() {
 
 /* ------------------------------ Search ------------------------------ */
 
-type CabinFilter = "all" | "economy" | "business";
 type SortKey = "drop" | "price";
 
 function SearchBar({
   query,
   onQuery,
-  cabin,
-  onCabin,
   sort,
   onSort,
   count,
 }: {
   query: string;
   onQuery: (v: string) => void;
-  cabin: CabinFilter;
-  onCabin: (v: CabinFilter) => void;
   sort: SortKey;
   onSort: (v: SortKey) => void;
   count: number;
 }) {
-  const cabins: { key: CabinFilter; label: string }[] = [
-    { key: "all", label: "All cabins" },
-    { key: "economy", label: "Economy" },
-    { key: "business", label: "Business" },
-  ];
-
   return (
     <div className="rounded-2xl border border-black/8 bg-white p-3 shadow-[0_1px_2px_rgba(11,16,32,0.04)] sm:p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        {/* Search input */}
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0B1020]/40" />
           <input
@@ -268,24 +249,6 @@ function SearchBar({
           )}
         </div>
 
-        {/* Cabin filter */}
-        <div className="flex rounded-xl bg-[#F1F2F5] p-1">
-          {cabins.map((c) => (
-            <button
-              key={c.key}
-              onClick={() => onCabin(c.key)}
-              className={`rounded-lg px-3.5 py-2 text-[13px] font-medium transition ${
-                cabin === c.key
-                  ? "bg-white text-[#0B1020] shadow-sm"
-                  : "text-[#0B1020]/60 hover:text-[#0B1020]"
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Sort */}
         <select
           value={sort}
           onChange={(e) => onSort(e.target.value as SortKey)}
@@ -309,22 +272,21 @@ const INR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 function dealImage(deal: Deal): string {
   if (deal.image) return deal.image;
-  // Deterministic photo per deal so cards stay visually stable across refetches.
-  // Small dimensions keep card thumbnails fast to fetch and decode.
-  return `https://picsum.photos/seed/${encodeURIComponent(deal.id)}/600/400`;
+  // City-specific high-quality image via loremflickr (Flickr-sourced).
+  const tag = `${deal.dest_city},city,skyline`.replace(/\s+/g, "");
+  return `https://loremflickr.com/800/560/${encodeURIComponent(tag)}?lock=${encodeURIComponent(deal.id)}`;
 }
 
 function monthOf(date: string): string {
-  // depart_date is a free-form string like "Dec 20"; take the leading token.
   return date?.trim().split(/\s+/)[0] ?? date;
 }
 
 function DealCard({ deal, priority = false }: { deal: Deal; priority?: boolean }) {
   const cabin = deal.cabin ?? "Economy";
-  const isBusiness = /business|first/i.test(cabin);
   const title = deal.dest_country ? `${deal.dest_city}, ${deal.dest_country}` : deal.dest_city;
   const stopsLabel = deal.stops === 0 ? "Non stop" : `${deal.stops} stop`;
   const hasDrop = deal.drop_pct != null && deal.drop_pct > 0;
+  const hasTypical = deal.typical_inr != null && deal.typical_inr > deal.price_inr;
 
   return (
     <a
@@ -334,46 +296,44 @@ function DealCard({ deal, priority = false }: { deal: Deal; priority?: boolean }
       className="group block"
     >
       {/* Image */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#EEF0F4]">
+      <div className="relative overflow-hidden rounded-3xl bg-[#EEF0F4] ring-1 ring-black/5">
         <img
           src={dealImage(deal)}
           alt={title}
-          width={600}
-          height={413}
+          width={800}
+          height={560}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
-          className="aspect-[16/11] w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+          className="aspect-[5/4] w-full object-cover transition duration-500 group-hover:scale-[1.03]"
         />
-        <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-white/90 backdrop-blur px-2.5 py-1 text-[12px] font-medium text-[#0B1020] shadow-sm">
-          {isBusiness ? (
-            <Briefcase className="w-3.5 h-3.5" />
-          ) : (
-            <Armchair className="w-3.5 h-3.5" />
-          )}
+        <div className="absolute top-3.5 left-3.5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-medium text-[#0B1020] shadow-[0_2px_8px_rgba(11,16,32,0.08)]">
+          <Crown className="w-3.5 h-3.5" strokeWidth={2} />
           {cabin}
         </div>
       </div>
 
       {/* Body */}
-      <div className="pt-3">
+      <div className="pt-4 px-1">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="text-[17px] font-semibold tracking-tight text-[#0B1020]">{title}</h3>
+          <div className="min-w-0">
+            <h3 className="text-[20px] font-semibold tracking-tight text-[#0B1020]">{title}</h3>
+            <div className="mt-1 text-[14px] text-[#0B1020]/55">
+              {monthOf(deal.depart_date)} · {stopsLabel}
+            </div>
+            <div className="text-[14px] text-[#0B1020]/55">From {deal.origin_city}</div>
+          </div>
           {hasDrop && (
-            <span className="shrink-0 text-[14px] font-semibold text-emerald-600">
+            <span className="shrink-0 rounded-full bg-[#E8F5C8] px-3 py-1.5 text-[13px] font-semibold text-[#3F6B1E]">
               {deal.drop_pct}% off
             </span>
           )}
         </div>
-        <div className="mt-1 text-[13px] text-[#0B1020]/60">
-          {monthOf(deal.depart_date)} · {stopsLabel}
-        </div>
-        <div className="text-[13px] text-[#0B1020]/60">From {deal.origin_city}</div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-[16px] font-bold text-[#0B1020]">{INR(deal.price_inr)}</span>
-          {deal.typical_inr != null && deal.typical_inr > deal.price_inr && (
-            <span className="text-[13px] line-through text-[#0B1020]/40">
-              {INR(deal.typical_inr)}
+        <div className="mt-3 flex items-baseline gap-2.5">
+          <span className="text-[22px] font-bold tracking-tight text-[#0B1020]">{INR(deal.price_inr)}</span>
+          {hasTypical && (
+            <span className="text-[16px] line-through text-[#0B1020]/35">
+              {INR(deal.typical_inr!)}
             </span>
           )}
         </div>
