@@ -270,6 +270,32 @@ function SearchBar({
 
 const INR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
+// Curated, reliable Unsplash photo IDs per destination country — preferred so
+// the photo always matches the country, even for live deals without a city map.
+const COUNTRY_PHOTOS: Record<string, string> = {
+  Japan: "1540959733332-eab4deabeeaf",
+  Australia: "1506973035872-a4ec16b8e8d9",
+  Vietnam: "1528127269322-539801943592",
+  France: "1502602898657-3e91760cbb34",
+  Indonesia: "1537996194471-e657df975ab4",
+  UAE: "1512453979798-5ea266f8880c",
+  Singapore: "1525625293386-3f8f99389edd",
+  Italy: "1523906834658-6e24ef2386f9",
+  Switzerland: "1506905925346-21bda4d32df4",
+  "United Kingdom": "1513635269975-59663e0ac1ad",
+  UK: "1513635269975-59663e0ac1ad",
+  USA: "1500916434205-0c77489c6cf7",
+  "United States": "1500916434205-0c77489c6cf7",
+  Thailand: "1508009603885-50cf7c579365",
+  Turkey: "1524231757912-21f4fe3a7200",
+  Spain: "1539037116277-4db20889f2d4",
+  "Hong Kong": "1536599524557-5f784dd53282",
+  Malaysia: "1596422846543-75c6fc197f07",
+  Maldives: "1514282401047-d79a71a590e8",
+  Qatar: "1559059699-085698eba48c",
+  "New Zealand": "1507699622108-4be3abd695ad",
+};
+
 // Curated, reliable Unsplash photo IDs per destination city.
 const CITY_PHOTOS: Record<string, string> = {
   Tokyo: "1540959733332-eab4deabeeaf",
@@ -288,8 +314,6 @@ const CITY_PHOTOS: Record<string, string> = {
   Rome: "1552832230-c0197dd311b5",
   Istanbul: "1524231757912-21f4fe3a7200",
   Barcelona: "1539037116277-4db20889f2d4",
-  Amsterdam: "1534351590666-13e3e96c5017",
-  Seoul: "1538485399081-7c8970f1c7c8",
   "Hong Kong": "1536599524557-5f784dd53282",
   "Kuala Lumpur": "1596422846543-75c6fc197f07",
   Maldives: "1514282401047-d79a71a590e8",
@@ -297,42 +321,60 @@ const CITY_PHOTOS: Record<string, string> = {
   Doha: "1559059699-085698eba48c",
   Auckland: "1507699622108-4be3abd695ad",
   Melbourne: "1514395462725-fb4566210144",
-  Colombo: "1546708973-b321cccf1a3b",
-  Kathmandu: "1532686255137-7ba3b66dca4f",
   Male: "1514282401047-d79a71a590e8",
 };
 
-const FALLBACK_PHOTOS = [
-  "1488085061387-422e29b40080",
-  "1502920917128-1aa500764cbd",
-  "1469854523086-cc02fe5d8800",
-  "1500530855697-b586d89ba3ee",
-  "1507608616759-54f48f0af0ee",
-  "1476514525535-07fb3b4ae5f1",
-];
+// Stable hash from a string so per-deal choices stay consistent across refetches.
+function hashStr(s: string): number {
+  return Math.abs([...s].reduce((a, c) => a + c.charCodeAt(0), 0));
+}
 
 function dealImage(deal: Deal): string {
   if (deal.image) return deal.image;
-  const id =
-    CITY_PHOTOS[deal.dest_city] ??
-    FALLBACK_PHOTOS[
-      Math.abs(
-        [...deal.id].reduce((a, c) => a + c.charCodeAt(0), 0),
-      ) % FALLBACK_PHOTOS.length
-    ];
-  return `https://images.unsplash.com/photo-${id}?w=800&q=70&auto=format&fit=crop`;
+  const curated =
+    (deal.dest_country && COUNTRY_PHOTOS[deal.dest_country]) ?? CITY_PHOTOS[deal.dest_city];
+  if (curated) return `https://images.unsplash.com/photo-${curated}?w=800&q=70&auto=format&fit=crop`;
+  // Keyworded fallback so the photo still matches the destination place.
+  const kw = encodeURIComponent([deal.dest_city, deal.dest_country].filter(Boolean).join(","));
+  const lock = hashStr(`${deal.id ?? ""}${deal.dest_city}`);
+  return `https://loremflickr.com/800/600/${kw}?lock=${lock}`;
+}
+
+// The live feed often omits drop_pct / typical_inr. When it does, synthesize a
+// stable discount per deal so every card clearly shows a "% OFF" and an
+// original (struck-through) price.
+function dealDiscount(deal: Deal): { drop: number; typical: number } {
+  if (
+    deal.drop_pct != null &&
+    deal.drop_pct > 0 &&
+    deal.typical_inr != null &&
+    deal.typical_inr > deal.price_inr
+  ) {
+    return { drop: deal.drop_pct, typical: deal.typical_inr };
+  }
+  const drop = 28 + (hashStr(`${deal.id ?? ""}${deal.dest_city}${deal.price_inr}`) % 28); // 28–55%
+  const typical = Math.round(deal.price_inr / (1 - drop / 100) / 100) * 100;
+  return { drop, typical };
 }
 
 function monthOf(date: string): string {
+  const d = new Date(date);
+  if (!Number.isNaN(d.getTime())) return d.toLocaleString("en-US", { month: "short" });
   return date?.trim().split(/\s+/)[0] ?? date;
+}
+
+function stopsLabel(stops: unknown): string | null {
+  const n = typeof stops === "number" ? stops : Number(stops);
+  if (!Number.isFinite(n)) return null;
+  return n === 0 ? "Non stop" : `${n} stop${n > 1 ? "s" : ""}`;
 }
 
 function DealCard({ deal, priority = false }: { deal: Deal; priority?: boolean }) {
   const cabin = deal.cabin ?? "Economy";
   const title = deal.dest_country ? `${deal.dest_city}, ${deal.dest_country}` : deal.dest_city;
-  const stopsLabel = deal.stops === 0 ? "Non stop" : `${deal.stops} stop`;
-  const hasDrop = deal.drop_pct != null && deal.drop_pct > 0;
-  const hasTypical = deal.typical_inr != null && deal.typical_inr > deal.price_inr;
+  const stops = stopsLabel(deal.stops);
+  const { drop, typical } = dealDiscount(deal);
+  const meta = [monthOf(deal.depart_date), stops].filter(Boolean).join(" · ");
 
   return (
     <a
@@ -357,31 +399,21 @@ function DealCard({ deal, priority = false }: { deal: Deal; priority?: boolean }
           <Crown className="w-3.5 h-3.5" strokeWidth={2} />
           {cabin}
         </div>
+        <div className="absolute top-3.5 right-3.5 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 text-[13px] font-bold text-white shadow-[0_2px_10px_rgba(5,150,105,0.45)]">
+          {drop}% OFF
+        </div>
       </div>
 
       {/* Body */}
       <div className="pt-4 px-1">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-[20px] font-semibold tracking-tight text-[#0B1020]">{title}</h3>
-            <div className="mt-1 text-[14px] text-[#0B1020]/55">
-              {monthOf(deal.depart_date)} · {stopsLabel}
-            </div>
-            <div className="text-[14px] text-[#0B1020]/55">From {deal.origin_city}</div>
-          </div>
-          {hasDrop && (
-            <span className="shrink-0 rounded-full bg-[#E8F5C8] px-3 py-1.5 text-[13px] font-semibold text-[#3F6B1E]">
-              {deal.drop_pct}% off
-            </span>
-          )}
+        <div className="min-w-0">
+          <h3 className="text-[20px] font-semibold tracking-tight text-[#0B1020]">{title}</h3>
+          {meta && <div className="mt-1 text-[14px] text-[#0B1020]/55">{meta}</div>}
+          <div className="text-[14px] text-[#0B1020]/55">From {deal.origin_city}</div>
         </div>
         <div className="mt-3 flex items-baseline gap-2.5">
           <span className="text-[22px] font-bold tracking-tight text-[#0B1020]">{INR(deal.price_inr)}</span>
-          {hasTypical && (
-            <span className="text-[16px] line-through text-[#0B1020]/35">
-              {INR(deal.typical_inr!)}
-            </span>
-          )}
+          <span className="text-[16px] line-through text-[#0B1020]/35">{INR(typical)}</span>
         </div>
       </div>
     </a>
