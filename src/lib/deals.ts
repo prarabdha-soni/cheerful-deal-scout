@@ -32,60 +32,68 @@ export type DealsPayload = {
 };
 
 /**
- * Sample deals shown only when the live feed returns nothing (empty list,
- * network error, or bad payload) so the grid is never blank.
+ * The only destinations shown on the site, in display order. Each featured
+ * destination maps the airport codes that count as it (Japan has several) to
+ * its display labels, plus a fallback fare used when the live feed has no deal
+ * for it yet — so all five cards always render.
  */
-function makeSample(
-  id: string,
-  origin: string,
-  destination: string,
-  origin_city: string,
-  dest_city: string,
-  dest_country: string,
-  cabin: string,
-  photoId: string,
-  price_inr: number,
-  typical_inr: number,
-  stops: number,
-  depart_date: string,
-): Deal {
-  const savings = typical_inr - price_inr;
+type Featured = {
+  slug: string;
+  city: string;
+  country: string;
+  cabin: string;
+  codes: string[];
+  // Fallback fare, used only until a live deal for this destination arrives.
+  origin: string;
+  origin_city: string;
+  price_inr: number;
+  typical_inr: number;
+  stops: number;
+  depart_date: string;
+};
+
+export const FEATURED: Featured[] = [
+  { slug: "bangkok",     city: "Bangkok", country: "Thailand",    cabin: "Economy", codes: ["BKK"],                origin: "BOM", origin_city: "Mumbai", price_inr: 22812, typical_inr: 38000, stops: 0, depart_date: "2026-09-04" },
+  { slug: "bali",        city: "Bali",    country: "Indonesia",   cabin: "Economy", codes: ["DPS"],                origin: "DEL", origin_city: "Delhi",  price_inr: 33145, typical_inr: 52000, stops: 1, depart_date: "2026-09-03" },
+  { slug: "maldives",    city: "Male",    country: "Maldives",    cabin: "Economy", codes: ["MLE"],                origin: "DEL", origin_city: "Delhi",  price_inr: 28900, typical_inr: 46000, stops: 0, depart_date: "2026-09-10" },
+  { slug: "switzerland", city: "Zurich",  country: "Switzerland", cabin: "Economy", codes: ["ZRH", "GVA", "BSL"],  origin: "DEL", origin_city: "Delhi",  price_inr: 52300, typical_inr: 95000, stops: 1, depart_date: "2026-12-05" },
+  { slug: "japan",       city: "Tokyo",   country: "Japan",       cabin: "Economy", codes: ["NRT", "HND", "KIX", "TYO"], origin: "DEL", origin_city: "Delhi", price_inr: 48700, typical_inr: 82000, stops: 1, depart_date: "2026-10-08" },
+];
+
+const CODE_TO_FEATURED = new Map<string, Featured>();
+for (const f of FEATURED) for (const c of f.codes) CODE_TO_FEATURED.set(c, f);
+
+/** Stamp the featured destination's display labels onto a live deal. */
+function enrich(deal: Deal, f: Featured): Deal {
+  return { ...deal, dest_city: f.city, dest_country: f.country, cabin: deal.cabin ?? f.cabin };
+}
+
+/** Fallback card for a featured destination with no live deal yet. */
+function sampleFor(f: Featured): Deal {
+  const savings = f.typical_inr - f.price_inr;
   return {
-    id,
-    origin,
-    destination,
-    origin_city,
-    dest_city,
-    dest_country,
-    cabin,
-    image: `https://images.unsplash.com/photo-${photoId}?w=600&q=70&auto=format&fit=crop`,
-    price_inr,
-    typical_inr,
-    drop_pct: Math.round((savings / typical_inr) * 100),
+    id: `featured-${f.slug}`,
+    origin: f.origin,
+    destination: f.codes[0],
+    origin_city: f.origin_city,
+    dest_city: f.city,
+    dest_country: f.country,
+    cabin: f.cabin,
+    price_inr: f.price_inr,
+    typical_inr: f.typical_inr,
+    drop_pct: Math.round((savings / f.typical_inr) * 100),
     savings_inr: savings,
     family_savings_inr: savings * 4,
     lowest_in_days: 180,
     typical_source: "history",
     google_signal: null,
     airline: "Multiple",
-    stops,
-    depart_date,
+    stops: f.stops,
+    depart_date: f.depart_date,
     return_date: "",
     google_flights_url: "https://www.google.com/travel/flights",
   };
 }
-
-export const SAMPLE_DEALS: Deal[] = [
-  makeSample("s-cok-hnd", "COK", "HND", "Kochi", "Tokyo", "Japan", "Business", "1540959733332-eab4deabeeaf", 128481, 350000, 1, "Aug"),
-  makeSample("s-del-adl", "DEL", "ADL", "New Delhi", "Adelaide", "Australia", "Economy", "1506973035872-a4ec16b8e8d9", 80698, 157000, 1, "Sep"),
-  makeSample("s-blr-han", "BLR", "HAN", "Bengaluru", "Hanoi", "Vietnam", "Business", "1528127269322-539801943592", 94493, 138000, 0, "Oct"),
-  makeSample("s-bom-cdg", "BOM", "CDG", "Mumbai", "Paris", "France", "Business", "1502602898657-3e91760cbb34", 38500, 72000, 1, "Dec"),
-  makeSample("s-bom-dps", "BOM", "DPS", "Mumbai", "Bali", "Indonesia", "Economy", "1537996194471-e657df975ab4", 24900, 46000, 1, "Nov"),
-  makeSample("s-del-dxb", "DEL", "DXB", "New Delhi", "Dubai", "UAE", "Economy", "1512453979798-5ea266f8880c", 14200, 26500, 0, "Jul"),
-  makeSample("s-maa-sin", "MAA", "SIN", "Chennai", "Singapore", "Singapore", "Business", "1525625293386-3f8f99389edd", 62000, 112000, 0, "Sep"),
-  makeSample("s-bom-vce", "BOM", "VCE", "Mumbai", "Venice", "Italy", "Economy", "1523906834658-6e24ef2386f9", 41500, 78000, 1, "Oct"),
-  makeSample("s-del-zrh", "DEL", "ZRH", "New Delhi", "Zurich", "Switzerland", "Economy", "1506905925346-21bda4d32df4", 52300, 95000, 1, "Dec"),
-];
 
 /* ------------------------------ Fetching ------------------------------ */
 
@@ -105,7 +113,11 @@ export async function fetchDeals(): Promise<
   }
 }
 
-/** Live deals when the feed returns any; otherwise the sample set. */
+/**
+ * Exactly the five featured destinations, in order. For each we prefer the
+ * cheapest matching live deal from the feed, falling back to a sample so the
+ * card is never blank. Any other destination in the feed is ignored.
+ */
 export function useDeals() {
   const q = useQuery({
     queryKey: ["deals"],
@@ -114,7 +126,16 @@ export function useDeals() {
     refetchOnWindowFocus: false,
   });
   const fetched = q.data?.ok ? q.data.data.deals : [];
-  const deals = fetched.length > 0 ? fetched : SAMPLE_DEALS;
+
+  const best = new Map<string, Deal>();
+  for (const d of fetched) {
+    const f = CODE_TO_FEATURED.get(d.destination);
+    if (!f) continue;
+    const cur = best.get(f.slug);
+    if (!cur || d.price_inr < cur.price_inr) best.set(f.slug, enrich(d, f));
+  }
+
+  const deals = FEATURED.map((f) => best.get(f.slug) ?? sampleFor(f));
   return { deals, isLoading: q.isLoading };
 }
 
